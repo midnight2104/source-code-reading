@@ -19,7 +19,7 @@ server:
 
 spring:
   profiles:
-    active: h2
+    # active: h2
   thymeleaf:
     cache: true
     encoding: utf-8
@@ -29,7 +29,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/shenyu?useUnicode=true&characterEncoding=utf-8&useSSL=false
     username: root
-    password:
+    password: 123456
     driver-class-name: com.mysql.jdbc.Driver
 
 mybatis:
@@ -52,14 +52,14 @@ shenyu:
     init_script: "META-INF/schema.sql"
     init_enable: true
   sync:
-    websocket:
-      enabled: true
+#    websocket:
+#      enabled: true
 #      zookeeper:
 #          url: localhost:2181
 #          sessionTimeout: 5000
 #          connectionTimeout: 2000
-#      http:
-#        enabled: true
+      http:
+        enabled: true
   #    nacos:
   #      url: localhost:8848
   #      namespace: 1c10d748-af86-43b9-8265-75f487d20c6c

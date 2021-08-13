@@ -91,19 +91,30 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
      * @param httpSyncProperties the HttpSyncProperties
      */
     public HttpLongPollingDataChangedListener(final HttpSyncProperties httpSyncProperties) {
+        // 默认客户端（这里是网关）1024个
         this.clients = new ArrayBlockingQueue<>(1024);
+        // 创建线程池
+        // ScheduledThreadPoolExecutor 可以执行延迟任务，周期任务，普通任务
         this.scheduler = new ScheduledThreadPoolExecutor(1,
                 ShenyuThreadFactory.create("long-polling", true));
+        // 长轮询的属性信息
         this.httpSyncProperties = httpSyncProperties;
     }
 
+    /**
+     * 在 InitializingBean接口中的afterPropertiesSet()方法中被调用，即在bean的初始化过程中执行
+     */
     @Override
     protected void afterInitialize() {
         long syncInterval = httpSyncProperties.getRefreshInterval().toMillis();
         // Periodically check the data for changes and update the cache
+
+        // 执行周期任务：更新内存中（CACHE）的数据每隔5分钟执行一次，5分钟后开始执行
+        // 防止admin先启动一段时间后，产生了数据；然后网关初次连接时，没有拿到全量数据
         scheduler.scheduleWithFixedDelay(() -> {
             log.info("http sync strategy refresh config start.");
             try {
+                // 从数据库读取数据到本地缓存（这里就是内存）
                 this.refreshLocalCache();
                 log.info("http sync strategy refresh config success.");
             } catch (Exception e) {
@@ -113,6 +124,7 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
         log.info("http sync strategy refresh interval: {}ms", syncInterval);
     }
 
+    // 从数据库读取数据到本地缓存（这里就是内存）
     private void refreshLocalCache() {
         this.updateAppAuthCache();
         this.updatePluginCache();
@@ -128,16 +140,26 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
      * @param request  the request
      * @param response the response
      */
+    /**
+     * 执行长轮询：如果有配置信息变更，这个配置信息将会立即响应给客户端（这里就是网关端）。
+     * 否则，否则客户端会一直被阻塞，直到有数据变更或者超时。
+     * @param request
+     * @param response
+     */
     public void doLongPolling(final HttpServletRequest request, final HttpServletResponse response) {
         // compare group md5
+        // 比较md5，判断网关的数据和admin端的数据是否一致，得到发生变更的数据
         List<ConfigGroupEnum> changedGroup = compareChangedGroup(request);
         String clientIp = getRemoteIp(request);
         // response immediately.
+        // 有变更的数据，则立即向网关响应
         if (CollectionUtils.isNotEmpty(changedGroup)) {
             this.generateResponse(response, changedGroup);
             log.info("send response with the changed group, ip={}, group={}", clientIp, changedGroup);
             return;
         }
+
+         // 没有变更，则将客户端（这里就是网关）放进阻塞队列
         // listen for configuration changed.
         final AsyncContext asyncContext = request.startAsync();
         // AsyncContext.settimeout() does not timeout properly, so you have to control it yourself
@@ -148,29 +170,39 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
 
     @Override
     protected void afterAppAuthChanged(final List<AppAuthData> changed, final DataEventTypeEnum eventType) {
+        // 在线程池中执行
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.APP_AUTH));
     }
 
     @Override
     protected void afterMetaDataChanged(final List<MetaData> changed, final DataEventTypeEnum eventType) {
+        // 在线程池中执行
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.META_DATA));
     }
 
     @Override
     protected void afterPluginChanged(final List<PluginData> changed, final DataEventTypeEnum eventType) {
+        // 在线程池中执行
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.PLUGIN));
     }
 
     @Override
     protected void afterRuleChanged(final List<RuleData> changed, final DataEventTypeEnum eventType) {
+        // 在线程池中执行
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.RULE));
     }
 
     @Override
     protected void afterSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
+        // 在线程池中执行
         scheduler.execute(new DataChangeTask(ConfigGroupEnum.SELECTOR));
     }
 
+    /**
+     * 判断组数据是否发生变更
+     * @param request
+     * @return
+     */
     private List<ConfigGroupEnum> compareChangedGroup(final HttpServletRequest request) {
         List<ConfigGroupEnum> changedGroup = new ArrayList<>(ConfigGroupEnum.values().length);
         for (ConfigGroupEnum group : ConfigGroupEnum.values()) {
@@ -297,20 +329,25 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
 
         @Override
         public void run() {
+            // 阻塞队列中的客户端超过了给定的值，则分批执行
             if (clients.size() > httpSyncProperties.getNotifyBatchSize()) {
                 List<LongPollingClient> targetClients = new ArrayList<>(clients.size());
                 clients.drainTo(targetClients);
                 List<List<LongPollingClient>> partitionClients = Lists.partition(targetClients, httpSyncProperties.getNotifyBatchSize());
+               // 分批执行
                 partitionClients.forEach(item -> scheduler.execute(() -> doRun(item)));
             } else {
+                // 执行任务
                 doRun(clients);
             }
         }
 
         private void doRun(final Collection<LongPollingClient> clients) {
+            // 通知所有客户端发生了数据变更
             for (Iterator<LongPollingClient> iter = clients.iterator(); iter.hasNext();) {
                 LongPollingClient client = iter.next();
                 iter.remove();
+                // 发送响应
                 client.sendResponse(Collections.singletonList(groupKey));
                 log.info("send response with the changed group,ip={}, group={}, changeTime={}", client.ip, groupKey, changeTime);
             }
@@ -360,12 +397,16 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
         @Override
         public void run() {
             try {
+                // 60秒后移除，并响应客户端
                 this.asyncTimeoutFuture = scheduler.schedule(() -> {
                     clients.remove(LongPollingClient.this);
                     List<ConfigGroupEnum> changedGroups = compareChangedGroup((HttpServletRequest) asyncContext.getRequest());
                     sendResponse(changedGroups);
                 }, timeoutTime, TimeUnit.MILLISECONDS);
+
+                // 添加到阻塞队列
                 clients.add(this);
+
             } catch (Exception ex) {
                 log.error("add long polling client error", ex);
             }
@@ -381,6 +422,7 @@ public class HttpLongPollingDataChangedListener extends AbstractDataChangedListe
             if (null != asyncTimeoutFuture) {
                 asyncTimeoutFuture.cancel(false);
             }
+            // 响应变更的组
             generateResponse((HttpServletResponse) asyncContext.getResponse(), changedGroups);
             asyncContext.complete();
         }

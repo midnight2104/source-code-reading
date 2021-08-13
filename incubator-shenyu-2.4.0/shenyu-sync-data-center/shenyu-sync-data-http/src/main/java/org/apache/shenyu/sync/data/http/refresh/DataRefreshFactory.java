@@ -30,6 +30,7 @@ import org.apache.shenyu.sync.data.api.PluginDataSubscriber;
 
 /**
  * The type Data refresh factory.
+ * 使用工厂模式更新数据
  */
 public final class DataRefreshFactory {
 
@@ -45,10 +46,15 @@ public final class DataRefreshFactory {
     public DataRefreshFactory(final PluginDataSubscriber pluginDataSubscriber,
                               final List<MetaDataSubscriber> metaDataSubscribers,
                               final List<AuthDataSubscriber> authDataSubscribers) {
+        // 插件更新
         ENUM_MAP.put(ConfigGroupEnum.PLUGIN, new PluginDataRefresh(pluginDataSubscriber));
+        // 选择器更新
         ENUM_MAP.put(ConfigGroupEnum.SELECTOR, new SelectorDataRefresh(pluginDataSubscriber));
+        // 规则更新
         ENUM_MAP.put(ConfigGroupEnum.RULE, new RuleDataRefresh(pluginDataSubscriber));
+        // 认证信息更新
         ENUM_MAP.put(ConfigGroupEnum.APP_AUTH, new AppAuthDataRefresh(authDataSubscribers));
+        // 元数据更新
         ENUM_MAP.put(ConfigGroupEnum.META_DATA, new MetaDataRefresh(metaDataSubscribers));
     }
 

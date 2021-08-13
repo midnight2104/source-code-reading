@@ -50,7 +50,7 @@ public class ConfigController {
 
     /**
      * Fetch configs shenyu result.
-     *
+     * 全量获取分组数据
      * @param groupKeys the group keys
      * @return the shenyu result
      */
@@ -66,7 +66,7 @@ public class ConfigController {
 
     /**
      * Listener.
-     *
+     * 监听数据变更，执行长轮询
      * @param request  the request
      * @param response the response
      */

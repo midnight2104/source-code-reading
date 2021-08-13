@@ -86,7 +86,7 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
 
     /**
      * fetch configuration from cache.
-     *
+     * 获取分组下的全量数据
      * @param groupKey the group key
      * @return the configuration data
      */
@@ -118,21 +118,36 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
         }
     }
 
+    /**
+     *
+     * 在admin端进行操作，认证信息发生了数据变更
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onAppAuthChanged(final List<AppAuthData> changed, final DataEventTypeEnum eventType) {
         if (CollectionUtils.isEmpty(changed)) {
             return;
         }
+        // 更新内存CACHE
         this.updateAppAuthCache();
+        // 执行数据变更任务
         this.afterAppAuthChanged(changed, eventType);
     }
 
+    /**
+     * 在admin的操作，元数据发生了更新
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onMetaDataChanged(final List<MetaData> changed, final DataEventTypeEnum eventType) {
         if (CollectionUtils.isEmpty(changed)) {
             return;
         }
+        // 更新内存CACHE
         this.updateMetaDataCache();
+        // 执行数据变更任务
         this.afterMetaDataChanged(changed, eventType);
     }
 
@@ -154,12 +169,19 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
     protected void afterAppAuthChanged(final List<AppAuthData> changed, final DataEventTypeEnum eventType) {
     }
 
+    /**
+     * 在admin的操作，有插件发生了更新
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onPluginChanged(final List<PluginData> changed, final DataEventTypeEnum eventType) {
         if (CollectionUtils.isEmpty(changed)) {
             return;
         }
+        // 更新内存CACHE
         this.updatePluginCache();
+        // 执行变更任务
         this.afterPluginChanged(changed, eventType);
     }
 
@@ -172,12 +194,19 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
     protected void afterPluginChanged(final List<PluginData> changed, final DataEventTypeEnum eventType) {
     }
 
+    /**
+     * 在admin操作，有规则发生了更新
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onRuleChanged(final List<RuleData> changed, final DataEventTypeEnum eventType) {
         if (CollectionUtils.isEmpty(changed)) {
             return;
         }
+        // 更新内存CACHE
         this.updateRuleCache();
+        // 执行变更任务
         this.afterRuleChanged(changed, eventType);
     }
 
@@ -190,12 +219,19 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
     protected void afterRuleChanged(final List<RuleData> changed, final DataEventTypeEnum eventType) {
     }
 
+    /**
+     * 在admin端操作，有选择器数据发生了更新
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
         if (CollectionUtils.isEmpty(changed)) {
             return;
         }
+        // 更新内存CACHE
         this.updateSelectorCache();
+        // 执行变更任务
         this.afterSelectorChanged(changed, eventType);
     }
 
@@ -208,13 +244,23 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
     protected void afterSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
     }
 
+    /**
+     * InitializingBean 接口中的方法，在bean的初始化过程中执行
+     */
     @Override
     public final void afterPropertiesSet() {
+        // 将认证信息从数据库读到admin的内存中（CACHE）
         updateAppAuthCache();
+        // 将插件信息从数据库读到admin的内存中（CACHE）
         updatePluginCache();
+        // 将规则信息从数据库读到admin的内存中（CACHE）
         updateRuleCache();
+        // 将选择器信息从数据库读到admin的内存中（CACHE）
         updateSelectorCache();
+        // 将元数据从数据库读到admin的内存中（CACHE）
         updateMetaDataCache();
+
+        // 执行定时任务：更新内存中（CACHE）的数据每隔5分钟执行一次，5分钟后开始执行
         afterInitialize();
     }
 
@@ -222,6 +268,7 @@ public abstract class AbstractDataChangedListener implements DataChangedListener
 
     /**
      * if md5 is not the same as the original, then update lcoal cache.
+     * 更新缓存中的数据
      * @param group ConfigGroupEnum
      * @param <T> the type of class
      * @param data the new config data
