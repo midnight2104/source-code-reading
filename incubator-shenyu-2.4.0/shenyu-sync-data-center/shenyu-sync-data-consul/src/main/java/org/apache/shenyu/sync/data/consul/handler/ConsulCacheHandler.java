@@ -67,11 +67,19 @@ public class ConsulCacheHandler {
         }
     }
 
+    /**
+     * 更新选择器信息
+     * @param configInfo 发生变更的数据
+     */
     protected void updateSelectorMap(final String configInfo) {
         try {
+            // SelectorData的反序列化
             List<SelectorData> selectorDataList = GsonUtils.getInstance().toObjectMapList(configInfo, SelectorData.class).values().stream().flatMap(Collection::stream).collect(Collectors.toList());
+            // 更新数据
             selectorDataList.forEach(selectorData -> Optional.ofNullable(pluginDataSubscriber).ifPresent(subscriber -> {
+                // 先删除
                 subscriber.unSelectorSubscribe(selectorData);
+                // 再插入
                 subscriber.onSelectorSubscribe(selectorData);
             }));
         } catch (JsonParseException e) {

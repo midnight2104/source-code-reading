@@ -71,39 +71,56 @@ public class ConsulSyncDataService extends ConsulCacheHandler implements AutoClo
         super(pluginDataSubscriber, metaDataSubscribers, authDataSubscribers);
         this.consulClient = consulClient;
         this.consulConfig = consulConfig;
+        // 创建线程池用于consul的数据同步
         this.executor = new ScheduledThreadPoolExecutor(1, ShenyuThreadFactory.create("consul-config-watch", true));
         consulIndexes.put(ConsulConstants.SYNC_PRE_FIX, 0L);
+        //初始化更新操作
         initUpdateMap();
+        // 开始同步
         start();
     }
 
     /**
      * init config key and update method mapping.
+     * 初始化配置key和更新方法映射
      */
     private void initUpdateMap() {
+        // 插件和插件更新操作接口
         groupMap.put(ConsulConstants.PLUGIN_DATA, this::updatePluginData);
+        // 选择器和选择器更新操作接口
         groupMap.put(ConsulConstants.SELECTOR_DATA, this::updateSelectorMap);
+        // 规则和规则更新操作接口
         groupMap.put(ConsulConstants.RULE_DATA, this::updateRuleMap);
+        // 元数据和元数据更新操作接口
         groupMap.put(ConsulConstants.META_DATA, this::updateMetaDataMap);
+        // 认证数据和认证数据更新操作接口
         groupMap.put(ConsulConstants.AUTH_DATA, this::updateAuthMap);
     }
 
+    /**
+     * 周期任务：向consul中获取数据
+     */
     private void watchConfigKeyValues() {
         if (this.running.get()) {
             for (String context : this.consulIndexes.keySet()) {
                 try {
+                    // 根据当前index判断是否发生更新
                     Long currentIndex = this.consulIndexes.get(context);
                     if (currentIndex == null) {
                         currentIndex = ConsulConstants.INIT_CONFIG_VERSION_INDEX;
                     }
+
+                    // 从consul中获取最新数据
                     Response<List<GetValue>> response = this.consulClient.getKVValues(context, null,
                             new QueryParams(consulConfig.getWaitTime(), currentIndex));
+
                     if (response.getValue() == null || response.getValue().isEmpty()) {
                         if (log.isTraceEnabled()) {
                             log.trace("No value for context " + context);
                         }
                         continue;
                     }
+                    // index没有更新，则数据没有发生变更
                     Long newIndex = response.getConsulIndex();
                     if (newIndex == null || newIndex.equals(currentIndex)) {
                         if (log.isTraceEnabled()) {
@@ -111,6 +128,7 @@ public class ConsulSyncDataService extends ConsulCacheHandler implements AutoClo
                         }
                         continue;
                     }
+                    // 如果当前包含该最新的newIndex，则也没有数据发生更新
                     if (!this.consulIndexes.containsValue(newIndex)
                             && !currentIndex.equals(ConsulConstants.INIT_CONFIG_VERSION_INDEX)) {
                         if (log.isTraceEnabled()) {
@@ -122,12 +140,14 @@ public class ConsulSyncDataService extends ConsulCacheHandler implements AutoClo
                                 //data has not changed
                                 return;
                             }
+                            // 有数据去更新
                             groupMap.get(data.getKey()).change(data.getDecodedValue());
                         });
 
                     } else if (log.isTraceEnabled()) {
                         log.info("Event for index already published for context " + context);
                     }
+                    // 存放当前最新的newIndex
                     this.consulIndexes.put(context, newIndex);
                 } catch (Exception e) {
                     log.warn("Error querying consul Key/Values for context '" + context + "'. Message: " + e.getMessage());
@@ -141,6 +161,7 @@ public class ConsulSyncDataService extends ConsulCacheHandler implements AutoClo
      */
     public void start() {
         if (this.running.compareAndSet(false, true)) {
+            // 周期性任务：每隔一秒向consul中获取数据（默认是1秒，可以在yaml中配置consul.watchDelay）
             this.watchFuture = this.executor.scheduleWithFixedDelay(this::watchConfigKeyValues,
                     5, consulConfig.getWatchDelay(), TimeUnit.MILLISECONDS);
         }

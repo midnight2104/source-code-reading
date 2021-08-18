@@ -68,15 +68,25 @@ public class SyncDataServiceImpl implements SyncDataService {
 
     private final MetaDataService metaDataService;
 
+    /***
+     * 全量数据同步
+     * @param type the type
+     * @return
+     */
     @Override
     public boolean syncAll(final DataEventTypeEnum type) {
+        // 同步认证信息
         appAuthService.syncData();
+        // 同步插件信息
         List<PluginData> pluginDataList = pluginService.listAll();
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.PLUGIN, type, pluginDataList));
+        // 同步选择器信息
         List<SelectorData> selectorDataList = selectorService.listAll();
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.SELECTOR, type, selectorDataList));
+        // 同步规则信息
         List<RuleData> ruleDataList = ruleService.listAll();
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.RULE, type, ruleDataList));
+        // 同步元数据信息
         metaDataService.syncData();
         return true;
     }

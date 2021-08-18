@@ -27,7 +27,10 @@ import org.springframework.boot.CommandLineRunner;
 /**
  * The type Consul data init.
  * 使用Consul进行数据同步时，数据初始化操作
- * 应用程序启动后执行
+ * 在应用程序启动后执行
+ * 接口 consulClient.setKVValue() 向consul中存值
+ * 接口 consulClient.getKVValue() 从consul中获取值
+ *
  */
 public class ConsulDataInit implements CommandLineRunner {
     private final ConsulClient consulClient;

@@ -47,6 +47,9 @@ import java.util.stream.Collectors;
 
 /**
  *  Use Consul to push data changes.
+ *  使用consul进行数据同步
+ *  对选择器数据类型的同步操作加了注释，其他类型是一样的逻辑：
+ *  从consul中获取最新数据更新本地内存，然后将变更的数据放进内存，最后将内存中的数据再发布到consul中
  */
 @Slf4j
 public class ConsulDataChangedListener implements DataChangedListener {
@@ -117,9 +120,16 @@ public class ConsulDataChangedListener implements DataChangedListener {
         publishConfig(ConsulConstants.PLUGIN_DATA, PLUGIN_MAP);
     }
 
+    /**
+     * 选择器数据更新
+     * @param changed   the changed 发生变更的数据
+     * @param eventType the event type 事件类型
+     */
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
+        // 从consul中获取选择器数据，然后更新admin内存中的数据
         updateSelectorMap(getConfig(ConsulConstants.SELECTOR_DATA));
+        // 事件类型
         switch (eventType) {
             case DELETE:
                 changed.forEach(selector -> {
@@ -146,18 +156,20 @@ public class ConsulDataChangedListener implements DataChangedListener {
                 });
                 break;
             default:
+                // 遍历变更的数据
                 changed.forEach(selector -> {
                     List<SelectorData> ls = SELECTOR_MAP
                             .getOrDefault(selector.getPluginName(), new ArrayList<>())
                             .stream()
-                            .filter(s -> !s.getId().equals(selector.getId()))
+                            .filter(s -> !s.getId().equals(selector.getId())) // 过滤存在的数据
                             .sorted(SELECTOR_DATA_COMPARATOR)
                             .collect(Collectors.toList());
-                    ls.add(selector);
-                    SELECTOR_MAP.put(selector.getPluginName(), ls);
+                    ls.add(selector); // 存放当前变更的数据
+                    SELECTOR_MAP.put(selector.getPluginName(), ls); // 存放当前变更的数据到内存
                 });
                 break;
         }
+        // 把当前数据发布到consul中
         publishConfig(ConsulConstants.SELECTOR_DATA, SELECTOR_MAP);
     }
 
@@ -244,6 +256,7 @@ public class ConsulDataChangedListener implements DataChangedListener {
 
     @SneakyThrows
     private String getConfig(final String dataKey) {
+        // 根据key从consul中获取值
         Response<GetValue> kvValue = consulClient.getKVValue(dataKey);
         return Objects.nonNull(kvValue.getValue()) ? kvValue.getValue().getDecodedValue() : ConsulConstants.EMPTY_CONFIG_DEFAULT_VALUE;
     }
@@ -268,15 +281,25 @@ public class ConsulDataChangedListener implements DataChangedListener {
         PLUGIN_MAP.keySet().removeAll(set);
     }
 
+    /**
+     * 更新选择器数据
+     * @param configInfo 从consul中获取到的最新数据
+     */
     private void updateSelectorMap(final String configInfo) {
+        // 反序列化最新数据
         JsonObject jo = GsonUtils.getInstance().fromJson(configInfo, JsonObject.class);
+        // 当前admin内存中缓存的数据
         Set<String> set = new HashSet<>(SELECTOR_MAP.keySet());
         for (Map.Entry<String, JsonElement> e : jo.entrySet()) {
+            // 移除旧数据
             set.remove(e.getKey());
+            // SelectorData的反序列化
             List<SelectorData> ls = new ArrayList<>();
             e.getValue().getAsJsonArray().forEach(je -> ls.add(GsonUtils.getInstance().fromJson(je, SelectorData.class)));
+            // 放最新的数据
             SELECTOR_MAP.put(e.getKey(), ls);
         }
+        // 移除内存中旧的数据
         SELECTOR_MAP.keySet().removeAll(set);
     }
 
