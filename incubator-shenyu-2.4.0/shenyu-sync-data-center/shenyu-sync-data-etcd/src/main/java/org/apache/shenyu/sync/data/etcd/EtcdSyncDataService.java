@@ -42,6 +42,7 @@ import java.util.Optional;
 
 /**
  * Data synchronize of etcd.
+ * 使用etcd进行数据同步
  */
 @Slf4j
 public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
@@ -56,7 +57,7 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
 
     /**
      * Instantiates a new Zookeeper cache manager.
-     *
+     * 实例化etcd缓存管理器
      * @param etcdClient             the etcd client
      * @param pluginDataSubscriber the plugin data subscriber
      * @param metaDataSubscribers  the meta data subscribers
@@ -68,18 +69,24 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
         this.pluginDataSubscriber = pluginDataSubscriber;
         this.metaDataSubscribers = metaDataSubscribers;
         this.authDataSubscribers = authDataSubscribers;
+        // 监听插件、选择器、规则信息
         watcherData();
+        // 监听 认证信息
         watchAppAuth();
+        // 监听元数据
         watchMetaData();
     }
 
     private void watcherData() {
         final String pluginParent = DefaultPathConstants.PLUGIN_PARENT;
+        // 获取所有插件
         List<String> pluginZKs = etcdClientGetChildren(pluginParent);
         for (String pluginName : pluginZKs) {
+            // 缓存数据并订阅节点：数据内容发生变更
             watcherAll(pluginName);
         }
 
+        // 订阅节点信息：新增或删除节点
         etcdClient.watchChildChange(pluginParent, (updateNode, updateValue) -> {
             if (!updateNode.isEmpty()) {
                 watcherAll(updateNode);
@@ -95,33 +102,46 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
 
     private void watcherPlugin(final String pluginName) {
         String pluginPath = DefaultPathConstants.buildPluginPath(pluginName);
+        // 从etcd获取数据缓存到网关的内存中
         cachePluginData(etcdClient.get(pluginPath));
+        // 订阅插件数据变更节点
         subscribePluginDataChanges(pluginPath, pluginName);
     }
 
     private void watcherSelector(final String pluginName) {
+        // 选择器节点
         String selectorParentPath = DefaultPathConstants.buildSelectorParentPath(pluginName);
+        // 选择器子节点
         List<String> childrenList = etcdClientGetChildren(selectorParentPath);
         if (CollectionUtils.isNotEmpty(childrenList)) {
+            // 处理每一个选择器
             childrenList.forEach(children -> {
                 String realPath = buildRealPath(selectorParentPath, children);
+                // 获取etcd中的数据，缓存到网关内存中
                 cacheSelectorData(etcdClient.get(realPath));
+                // 订阅当前节点，如果数据有更新则执行更新操作
                 subscribeSelectorDataChanges(realPath);
             });
         }
+
+        // 订阅节点信息：新增或删除节点
         subscribeChildChanges(ConfigGroupEnum.SELECTOR, selectorParentPath);
     }
 
     private void watcherRule(final String pluginName) {
         String ruleParent = DefaultPathConstants.buildRuleParentPath(pluginName);
         List<String> childrenList = etcdClientGetChildren(ruleParent);
+
         if (CollectionUtils.isNotEmpty(childrenList)) {
             childrenList.forEach(children -> {
                 String realPath = buildRealPath(ruleParent, children);
+                // 从etcd获取数据并缓存到网关内存
                 cacheRuleData(etcdClient.get(realPath));
+                // 订阅数据变更
                 subscribeRuleDataChanges(realPath);
             });
         }
+        // 订阅节点变更
         subscribeChildChanges(ConfigGroupEnum.RULE, ruleParent);
     }
 
@@ -131,10 +151,13 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
         if (CollectionUtils.isNotEmpty(childrenList)) {
             childrenList.forEach(children -> {
                 String realPath = buildRealPath(appAuthParent, children);
+                // 从etcd获取数据并缓存到网关内存
                 cacheAuthData(etcdClient.get(realPath));
+                // 订阅数据变更
                 subscribeAppAuthDataChanges(realPath);
             });
         }
+        // 订阅节点变更
         subscribeChildChanges(ConfigGroupEnum.APP_AUTH, appAuthParent);
     }
 
@@ -144,10 +167,13 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
         if (CollectionUtils.isNotEmpty(childrenList)) {
             childrenList.forEach(children -> {
                 String realPath = buildRealPath(metaDataPath, children);
+                // 从etcd获取数据并缓存到网关内存
                 cacheMetaData(etcdClient.get(realPath));
+                // 订阅数据变更
                 subscribeMetaDataChanges(realPath);
             });
         }
+        // 订阅节点变更
         subscribeChildChanges(ConfigGroupEnum.META_DATA, metaDataPath);
     }
 
@@ -183,6 +209,7 @@ public class EtcdSyncDataService implements SyncDataService, AutoCloseable {
     }
 
     private void subscribePluginDataChanges(final String pluginPath, final String pluginName) {
+        // 为key添加更新和删除事件处理器
         etcdClient.watchDataChange(pluginPath, (updatePath, updateValue) -> {
             final String dataPath = buildRealPath(pluginPath, updatePath);
             final String dataStr = etcdClient.get(dataPath);

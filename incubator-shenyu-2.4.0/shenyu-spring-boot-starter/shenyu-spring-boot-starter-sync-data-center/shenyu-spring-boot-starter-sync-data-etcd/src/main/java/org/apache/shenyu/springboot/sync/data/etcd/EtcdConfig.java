@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * The type etcd configuration.
+ * etcd 相关配置
  */
 @Data
 @ConfigurationProperties(prefix = "shenyu.sync.etcd")

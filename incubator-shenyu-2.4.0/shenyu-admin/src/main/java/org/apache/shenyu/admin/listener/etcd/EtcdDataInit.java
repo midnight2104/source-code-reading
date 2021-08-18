@@ -25,6 +25,7 @@ import org.springframework.boot.CommandLineRunner;
 
 /**
  * EtcdDataInit.
+ * admin启动成功后，执行etcd数据初始化操作
  */
 @Slf4j
 public class EtcdDataInit implements CommandLineRunner {
@@ -43,8 +44,10 @@ public class EtcdDataInit implements CommandLineRunner {
         final String pluginPath = DefaultPathConstants.PLUGIN_PARENT;
         final String authPath = DefaultPathConstants.APP_AUTH_PARENT;
         final String metaDataPath = DefaultPathConstants.META_DATA;
+        // 如果没有数据，就全量同步
         if (!etcdClient.exists(pluginPath) && !etcdClient.exists(authPath) && !etcdClient.exists(metaDataPath)) {
             log.info("Init all data from database");
+            // 第一次全量数据同步
             syncDataService.syncAll(DataEventTypeEnum.REFRESH);
         }
     }

@@ -34,6 +34,9 @@ import java.util.List;
 
 /**
  * Event forwarders, which forward the changed events to each ConfigEventListener.
+ * 数据变更事件分发器：同admin端有数据发生变更时，将变更数据同步到 ShenYu 网关
+ * 数据变更依赖于Spring的事件监听机制：ApplicationEventPublisher --> ApplicationEvent --> ApplicationListener
+ *
  */
 @Component
 public class DataChangedEventDispatcher implements ApplicationListener<DataChangedEvent>, InitializingBean {
@@ -46,10 +49,16 @@ public class DataChangedEventDispatcher implements ApplicationListener<DataChang
         this.applicationContext = applicationContext;
     }
 
+    /**
+     * 有数据变更时，调用此方法
+     * @param event
+     */
     @Override
     @SuppressWarnings("unchecked")
     public void onApplicationEvent(final DataChangedEvent event) {
+        // 遍历数据变更监听器，一般使用一种数据同步的方式就好了
         for (DataChangedListener listener : listeners) {
+            // 哪种数据发生变更
             switch (event.getGroupKey()) {
                 case APP_AUTH:
                     listener.onAppAuthChanged((List<AppAuthData>) event.getSource(), event.getEventType());
@@ -72,6 +81,9 @@ public class DataChangedEventDispatcher implements ApplicationListener<DataChang
         }
     }
 
+    /**
+     * 在bean的初始化过程中被调用，主要是读取数据变更监听器，使用哪种方式进行数据同步
+     */
     @Override
     public void afterPropertiesSet() {
         Collection<DataChangedListener> listenerBeans = applicationContext.getBeansOfType(DataChangedListener.class).values();

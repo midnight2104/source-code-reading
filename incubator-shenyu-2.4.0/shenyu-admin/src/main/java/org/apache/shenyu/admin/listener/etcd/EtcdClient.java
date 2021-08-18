@@ -30,6 +30,7 @@ import java.util.List;
 
 /**
  * Etcd client of Admin.
+ * admin端的etcd客户端
  */
 @Slf4j
 public class EtcdClient {

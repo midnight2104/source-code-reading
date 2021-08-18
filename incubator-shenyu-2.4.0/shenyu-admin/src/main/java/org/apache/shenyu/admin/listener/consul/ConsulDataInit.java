@@ -26,6 +26,8 @@ import org.springframework.boot.CommandLineRunner;
 
 /**
  * The type Consul data init.
+ * 使用Consul进行数据同步时，数据初始化操作
+ * 应用程序启动后执行
  */
 public class ConsulDataInit implements CommandLineRunner {
     private final ConsulClient consulClient;
@@ -47,6 +49,7 @@ public class ConsulDataInit implements CommandLineRunner {
         String pluginData = ConsulConstants.PLUGIN_DATA;
         String authData = ConsulConstants.AUTH_DATA;
         String metaData = ConsulConstants.META_DATA;
+        // 第一次，数据不存在consul中，进行全量同步
         if (dataKeyNotExist(pluginData) && dataKeyNotExist(authData) && dataKeyNotExist(metaData)) {
             syncDataService.syncAll(DataEventTypeEnum.REFRESH);
         }

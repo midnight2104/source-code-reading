@@ -37,6 +37,9 @@ import java.util.stream.Collectors;
 
 /**
  * Etcd client of Bootstrap.
+ * 网关端的etcd客户端
+ * client.getKVClient().get(key).get().getKvs(); 获取 KeyValue 对象
+ * client.getWatchClient().watch(key, listener); 为 key 添加监听事件，实现数据订阅
  */
 @Slf4j
 public class EtcdClient {
@@ -69,6 +72,7 @@ public class EtcdClient {
 
     /**
      * get node sub nodes.
+     * 获取节点的子节点
      * @param prefix node prefix.
      * @param separator separator char
      * @return sub nodes
@@ -117,42 +121,49 @@ public class EtcdClient {
 
     /**
      * subscribe data change.
+     * 订阅数据变更
      * @param key node name
      * @param updateHandler node value handler of update
      * @param deleteHandler node value handler of delete
      */
     public void watchDataChange(final String key, final BiConsumer<String, String> updateHandler, final Consumer<String> deleteHandler) {
+        // 得到监听事件
         Watch.Listener listener = watch(updateHandler, deleteHandler);
+        // 为key添加监听事件
         Watch.Watcher watch = client.getWatchClient().watch(ByteSequence.from(key, StandardCharsets.UTF_8), listener);
         watchCache.put(key, watch);
     }
 
     /**
      * subscribe sub node change.
+     * 订阅子节点变更
      * @param key param node name.
      * @param updateHandler sub node handler of update
      * @param deleteHandler sub node delete of delete
      */
     public void watchChildChange(final String key, final BiConsumer<String, String> updateHandler, final Consumer<String> deleteHandler) {
+        // 得到监听事件
         Watch.Listener listener = watch(updateHandler, deleteHandler);
         WatchOption option = WatchOption.newBuilder()
                 .withPrefix(ByteSequence.from(key, StandardCharsets.UTF_8))
                 .build();
+        // 为key添加监听事件，节点变更
         Watch.Watcher watch = client.getWatchClient().watch(ByteSequence.from(key, StandardCharsets.UTF_8), option, listener);
         watchCache.put(key, watch);
     }
 
     private Watch.Listener watch(final BiConsumer<String, String> updateHandler, final Consumer<String> deleteHandler) {
+        // 实例化一个监听事件，当key变化时会被调用
         return Watch.listener(response -> {
             for (WatchEvent event: response.getEvents()) {
                 String path = event.getKeyValue().getKey().toString(StandardCharsets.UTF_8);
                 String value = event.getKeyValue().getValue().toString(StandardCharsets.UTF_8);
                 switch (event.getEventType()) {
                     case PUT:
-                        updateHandler.accept(path, value);
+                        updateHandler.accept(path, value); //执行更新操作
                         continue;
                     case DELETE:
-                        deleteHandler.accept(path);
+                        deleteHandler.accept(path); //执行删除操作
                         continue;
                     default:
                 }
@@ -162,6 +173,7 @@ public class EtcdClient {
 
     /**
      * cancel subscribe.
+     * 取消订阅
      * @param key node name
      */
     public void watchClose(final String key) {

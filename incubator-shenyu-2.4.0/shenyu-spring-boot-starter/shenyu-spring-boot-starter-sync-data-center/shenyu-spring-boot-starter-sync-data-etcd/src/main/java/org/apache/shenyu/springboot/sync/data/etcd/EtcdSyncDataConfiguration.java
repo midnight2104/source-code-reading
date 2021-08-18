@@ -37,6 +37,7 @@ import java.util.List;
 
 /**
  * Etcd sync data configuration for spring boot.
+ * etcd 数据同步配置
  */
 @Configuration
 @ConditionalOnClass(EtcdSyncDataConfiguration.class)

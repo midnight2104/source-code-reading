@@ -34,6 +34,7 @@ import java.util.List;
 
 /**
  * EtcdDataDataChangedListener.
+ * Etcd数据变更监听器
  */
 @Slf4j
 public class EtcdDataDataChangedListener implements DataChangedListener {
@@ -44,6 +45,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         this.etcdClient = client;
     }
 
+    /**
+     * 处理认证信息
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onAppAuthChanged(final List<AppAuthData> changed, final DataEventTypeEnum eventType) {
         for (AppAuthData data : changed) {
@@ -58,6 +64,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         }
     }
 
+    /**
+     * 处理插件
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onPluginChanged(final List<PluginData> changed, final DataEventTypeEnum eventType) {
         for (PluginData data : changed) {
@@ -76,6 +87,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         }
     }
 
+    /**
+     * 处理选择器
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
         if (eventType == DataEventTypeEnum.REFRESH && !changed.isEmpty()) {
@@ -93,6 +109,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         }
     }
 
+    /**
+     * 处理元数据
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @SneakyThrows
     @Override
     public void onMetaDataChanged(final List<MetaData> changed, final DataEventTypeEnum eventType) {
@@ -108,6 +129,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         }
     }
 
+    /**
+     * 处理规则
+     * @param changed   the changed
+     * @param eventType the event type
+     */
     @Override
     public void onRuleChanged(final List<RuleData> changed, final DataEventTypeEnum eventType) {
         if (eventType == DataEventTypeEnum.REFRESH && !changed.isEmpty()) {
@@ -125,6 +151,11 @@ public class EtcdDataDataChangedListener implements DataChangedListener {
         }
     }
 
+    /**
+     * 将数据发送到etcd
+     * @param pluginPath
+     * @param data
+     */
     private void updateNode(final String pluginPath, final Object data) {
         etcdClient.put(pluginPath, GsonUtils.getInstance().toJson(data));
     }
