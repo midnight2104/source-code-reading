@@ -60,11 +60,11 @@ shenyu:
 #          connectionTimeout: 2000
 #      http:
 #        enabled: true
-  #    nacos:
-  #      url: localhost:8848
-  #      namespace: 1c10d748-af86-43b9-8265-75f487d20c6c
-  #      username:
-  #      password:
+      nacos:
+        url: localhost:8848
+        namespace: 1c10d748-af86-43b9-8265-75f487d20c6c
+        username:
+        password:
   #      acm:
   #        enabled: false
   #        endpoint: acm.aliyun.com
@@ -73,8 +73,8 @@ shenyu:
   #        secretKey:
 #    etcd:
 #      url: http://localhost:2379
-    consul:
-      url: http://localhost:8500
+#    consul:
+#      url: http://localhost:8500
   aes:
     secret:
       key: 2095132720951327

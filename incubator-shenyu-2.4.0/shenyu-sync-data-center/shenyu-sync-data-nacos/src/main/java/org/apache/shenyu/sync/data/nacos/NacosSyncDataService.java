@@ -29,6 +29,7 @@ import java.util.List;
 
 /**
  * The type Nacos sync data service.
+ * 网关端使用nacos进行数据同步
  */
 public class NacosSyncDataService extends NacosCacheHandler implements AutoCloseable, SyncDataService {
 

@@ -82,11 +82,17 @@ public class NacosCacheHandler {
         }
     }
 
+    /**
+     * 更新选择器数据
+     * @param configInfo 发生变更的数据
+     */
     protected void updateSelectorMap(final String configInfo) {
         try {
             List<SelectorData> selectorDataList = GsonUtils.getInstance().toObjectMapList(configInfo, SelectorData.class).values().stream().flatMap(Collection::stream).collect(Collectors.toList());
             selectorDataList.forEach(selectorData -> Optional.ofNullable(pluginDataSubscriber).ifPresent(subscriber -> {
+                //先删除
                 subscriber.unSelectorSubscribe(selectorData);
+                //再插入
                 subscriber.onSelectorSubscribe(selectorData);
             }));
         } catch (JsonParseException e) {
@@ -142,9 +148,11 @@ public class NacosCacheHandler {
     }
 
     protected void watcherData(final String dataId, final OnChange oc) {
+        // 添加监听器
         Listener listener = new Listener() {
             @Override
             public void receiveConfigInfo(final String configInfo) {
+                // 后续有数据变更时，数据同步更新
                 oc.change(configInfo);
             }
 
@@ -153,6 +161,8 @@ public class NacosCacheHandler {
                 return null;
             }
         };
+
+        // 第一次的数据同步
         oc.change(getConfigAndSignListener(dataId, listener));
         LISTENERS.computeIfAbsent(dataId, key -> new ArrayList<>()).add(listener);
     }

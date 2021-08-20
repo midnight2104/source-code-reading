@@ -45,6 +45,9 @@ import java.util.stream.Collectors;
 
 /**
  * Use nacos to push data changes.
+ * 使用nacos进行数据同步
+ * 接口 configService.getConfig() 从nacos中获取数据
+ * 接口 configService.publishConfig() 向nacos发布数据
  */
 public class NacosDataChangedListener implements DataChangedListener {
 
@@ -117,6 +120,7 @@ public class NacosDataChangedListener implements DataChangedListener {
 
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
+        // 从nacos中获取选择器数据并更新当前内存中的数据
         updateSelectorMap(getConfig(NacosPathConstants.SELECTOR_DATA_ID));
         switch (eventType) {
             case DELETE:
@@ -151,11 +155,12 @@ public class NacosDataChangedListener implements DataChangedListener {
                             .filter(s -> !s.getId().equals(selector.getId()))
                             .sorted(SELECTOR_DATA_COMPARATOR)
                             .collect(Collectors.toList());
-                    ls.add(selector);
-                    SELECTOR_MAP.put(selector.getPluginName(), ls);
+                    ls.add(selector); // 存放当前最新数据
+                    SELECTOR_MAP.put(selector.getPluginName(), ls);// 存放当前最新数据
                 });
                 break;
         }
+        //将更新后的数据发布到nacos
         publishConfig(NacosPathConstants.SELECTOR_DATA_ID, SELECTOR_MAP);
     }
 
@@ -267,11 +272,14 @@ public class NacosDataChangedListener implements DataChangedListener {
     }
 
     private void updateSelectorMap(final String configInfo) {
+        // 将字符串的数据转成JsonObject
         JsonObject jo = GsonUtils.getInstance().fromJson(configInfo, JsonObject.class);
+        // 以从nacos中获取到的数据为准更新更新admin内存中的选择器数据
         Set<String> set = new HashSet<>(SELECTOR_MAP.keySet());
         for (Entry<String, JsonElement> e : jo.entrySet()) {
             set.remove(e.getKey());
             List<SelectorData> ls = new ArrayList<>();
+            // 反序列化
             e.getValue().getAsJsonArray().forEach(je -> ls.add(GsonUtils.getInstance().fromJson(je, SelectorData.class)));
             SELECTOR_MAP.put(e.getKey(), ls);
         }
