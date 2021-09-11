@@ -32,6 +32,7 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 /**
+ * WebSocketClient
  * The type shenyu websocket client.
  */
 @Slf4j
@@ -54,17 +55,22 @@ public final class ShenyuWebsocketClient extends WebSocketClient {
         super(serverUri);
         this.websocketDataHandler = new WebsocketDataHandler(pluginDataSubscriber, metaDataSubscribers, authDataSubscribers);
     }
-    
+
+    // 成功建立连接后执行
     @Override
     public void onOpen(final ServerHandshake serverHandshake) {
+        // 防止重新建立连接时，再次执行，所以用alreadySync进行判断
         if (!alreadySync) {
+            // 同步所有数据，MYSELF 类型
             send(DataEventTypeEnum.MYSELF.name());
             alreadySync = true;
         }
     }
-    
+
+    // 接受到消息后执行
     @Override
     public void onMessage(final String result) {
+        // 处理接收到的数据
         handleResult(result);
     }
     
@@ -80,10 +86,15 @@ public final class ShenyuWebsocketClient extends WebSocketClient {
     
     @SuppressWarnings("ALL")
     private void handleResult(final String result) {
+        // 数据反序列化
         WebsocketData websocketData = GsonUtils.getInstance().fromJson(result, WebsocketData.class);
+        // 哪种数据类型，插件、选择器、规则...
         ConfigGroupEnum groupEnum = ConfigGroupEnum.acquireByName(websocketData.getGroupType());
+        // 哪种操作类型，更新、删除...
         String eventType = websocketData.getEventType();
         String json = GsonUtils.getInstance().toJson(websocketData.getData());
+
+        // 处理数据
         websocketDataHandler.executor(groupEnum, json, eventType);
     }
 }

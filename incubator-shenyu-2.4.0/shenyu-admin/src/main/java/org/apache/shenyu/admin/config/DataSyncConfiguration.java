@@ -48,12 +48,15 @@ import org.springframework.context.annotation.Import;
 import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 
 /**
+ * 数据同步配置类
+ * 通过springboot条件装配实现
  * The type Data sync configuration.
  */
 @Configuration
 public class DataSyncConfiguration {
 
     /**
+     * http长轮询
      * http long polling.
      */
     @Configuration
@@ -69,6 +72,7 @@ public class DataSyncConfiguration {
     }
 
     /**
+     * zookeeper数据同步
      * The type Zookeeper listener.
      */
     @Configuration
@@ -103,6 +107,7 @@ public class DataSyncConfiguration {
     }
 
     /**
+     * nacos数据同步
      * The type Nacos listener.
      */
     @Configuration
@@ -137,6 +142,7 @@ public class DataSyncConfiguration {
     }
 
     /**
+     * websocket数据同步（默认策略）
      * The WebsocketListener(default strategy).
      */
     @Configuration
@@ -179,6 +185,7 @@ public class DataSyncConfiguration {
     }
 
     /**
+     * etcd数据同步
      * The type Etcd listener.
      */
     @Configuration
@@ -221,6 +228,7 @@ public class DataSyncConfiguration {
     }
 
     /**
+     * consul数据同步
      * The type Consul listener.
      */
     @Configuration

@@ -65,14 +65,14 @@ public abstract class AbstractDataHandler<T> implements DataHandler {
             switch (eventTypeEnum) {
                 case REFRESH:
                 case MYSELF:
-                    doRefresh(dataList);
+                    doRefresh(dataList);  //刷新数据，全量同步
                     break;
                 case UPDATE:
                 case CREATE:
-                    doUpdate(dataList);
+                    doUpdate(dataList); // 更新或创建数据，增量同步
                     break;
                 case DELETE:
-                    doDelete(dataList);
+                    doDelete(dataList);  // 删除数据
                     break;
                 default:
                     break;

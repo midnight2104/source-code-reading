@@ -37,6 +37,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Websocket数据同步服务
  * Websocket sync data service.
  */
 @Slf4j
@@ -58,10 +59,13 @@ public class WebsocketSyncDataService implements SyncDataService, AutoCloseable 
                                     final PluginDataSubscriber pluginDataSubscriber,
                                     final List<MetaDataSubscriber> metaDataSubscribers,
                                     final List<AuthDataSubscriber> authDataSubscribers) {
+        // admin端的同步地址，有多个的话，使用","分割
         String[] urls = StringUtils.split(websocketConfig.getUrls(), ",");
+        // 创建调度线程池，一个admin分配一个
         executor = new ScheduledThreadPoolExecutor(urls.length, ShenyuThreadFactory.create("websocket-connect", true));
         for (String url : urls) {
             try {
+                //创建WebsocketClient，一个admin分配一个
                 clients.add(new ShenyuWebsocketClient(new URI(url), Objects.requireNonNull(pluginDataSubscriber), metaDataSubscribers, authDataSubscribers));
             } catch (URISyntaxException e) {
                 log.error("websocket url({}) is error", url, e);
@@ -69,12 +73,17 @@ public class WebsocketSyncDataService implements SyncDataService, AutoCloseable 
         }
         try {
             for (WebSocketClient client : clients) {
+                // 和websocket server建立连接
                 boolean success = client.connectBlocking(3000, TimeUnit.MILLISECONDS);
                 if (success) {
                     log.info("websocket connection is successful.....");
                 } else {
                     log.error("websocket connection is error.....");
                 }
+
+                // 执行定时任务，每隔10秒执行一次
+                // 主要作用是判断websocket连接是否已经断开，如果已经断开，则尝试重连。
+                // 如果没有断开，就进行 ping-pong 检测
                 executor.scheduleAtFixedRate(() -> {
                     try {
                         if (client.isClosed()) {
@@ -102,11 +111,13 @@ public class WebsocketSyncDataService implements SyncDataService, AutoCloseable 
 
     @Override
     public void close() {
+        // 关闭 websocket client
         for (WebSocketClient client : clients) {
             if (!client.isClosed()) {
                 client.close();
             }
         }
+        // 关闭线程池
         if (Objects.nonNull(executor)) {
             executor.shutdown();
         }

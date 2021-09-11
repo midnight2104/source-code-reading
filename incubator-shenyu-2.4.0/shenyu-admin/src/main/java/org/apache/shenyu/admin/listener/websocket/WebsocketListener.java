@@ -58,6 +58,7 @@ public class WebsocketListener implements ServletRequestListener {
             HttpServletRequest request = (HttpServletRequest) sre.getServletRequest();
             if (null != request && null != request.getSession()) {
                 HttpSession session = request.getSession();
+                // 把客户端的地址存放到request和session中
                 request.setAttribute(CLIENT_IP_NAME, sre.getServletRequest().getRemoteAddr());
                 session.setAttribute(CLIENT_IP_NAME, sre.getServletRequest().getRemoteAddr());
             }

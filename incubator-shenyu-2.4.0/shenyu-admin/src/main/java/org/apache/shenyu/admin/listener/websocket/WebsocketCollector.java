@@ -51,12 +51,13 @@ public class WebsocketCollector {
 
     /**
      * On open.
-     *
+     * 成功建立连接后执行
      * @param session the session
      */
     @OnOpen
     public void onOpen(final Session session) {
         log.info("websocket on client[{}] open successful....", getClientIp(session));
+        // 保存所有session（比如部署了多个网关）
         SESSION_SET.add(session);
     }
 
@@ -82,9 +83,12 @@ public class WebsocketCollector {
     public void onMessage(final String message, final Session session) {
         if (message.equals(DataEventTypeEnum.MYSELF.name())) {
             try {
+                // 通过threadlocal维护session
                 ThreadLocalUtil.put(SESSION_KEY, session);
+                // 同步全部数据
                 SpringBeanUtils.getInstance().getBean(SyncDataService.class).syncAll(DataEventTypeEnum.MYSELF);
             } finally {
+                // 及时清理 threadlocal
                 ThreadLocalUtil.clear();
             }
         }
@@ -92,7 +96,7 @@ public class WebsocketCollector {
 
     /**
      * On close.
-     *
+     * 关闭时执行
      * @param session the session
      */
     @OnClose
@@ -104,7 +108,7 @@ public class WebsocketCollector {
 
     /**
      * On error.
-     *
+     * 发生错误时执行
      * @param session the session
      * @param error   the error
      */
@@ -123,12 +127,17 @@ public class WebsocketCollector {
      */
     public static void send(final String message, final DataEventTypeEnum type) {
         if (StringUtils.isNotBlank(message)) {
+            // 如果是MYSELF（第一次的全量同步）
             if (DataEventTypeEnum.MYSELF == type) {
+                // 从threadlocal中获取session
                 Session session = (Session) ThreadLocalUtil.get(SESSION_KEY);
                 if (session != null) {
+                    // 向该session发送全量数据
                     sendMessageBySession(session, message);
                 }
             } else {
+                // 后续的增量同步
+                // 向所有的session中同步变更数据
                 SESSION_SET.forEach(session -> sendMessageBySession(session, message));
             }
         }
@@ -136,6 +145,7 @@ public class WebsocketCollector {
 
     private static void sendMessageBySession(final Session session, final String message) {
         try {
+            // 通过websocket的session把消息发送出去
             session.getBasicRemote().sendText(message);
         } catch (IOException e) {
             log.error("websocket send result is exception: ", e);

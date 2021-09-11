@@ -25,6 +25,7 @@ import org.apache.shenyu.sync.data.api.MetaDataSubscriber;
 import org.apache.shenyu.sync.data.api.PluginDataSubscriber;
 
 /**
+ * 通过工厂模式创建 Websocket数据处理器
  * The type Websocket cache handler.
  */
 public class WebsocketDataHandler {
@@ -33,7 +34,7 @@ public class WebsocketDataHandler {
 
     /**
      * Instantiates a new Websocket data handler.
-     *
+     * 每种数据类型，提供一个处理器
      * @param pluginDataSubscriber the plugin data subscriber
      * @param metaDataSubscribers  the meta data subscribers
      * @param authDataSubscribers  the auth data subscribers
@@ -41,10 +42,15 @@ public class WebsocketDataHandler {
     public WebsocketDataHandler(final PluginDataSubscriber pluginDataSubscriber,
                                 final List<MetaDataSubscriber> metaDataSubscribers,
                                 final List<AuthDataSubscriber> authDataSubscribers) {
+        // 插件 --> 插件数据处理器
         ENUM_MAP.put(ConfigGroupEnum.PLUGIN, new PluginDataHandler(pluginDataSubscriber));
+        // 选择器 --> 选择器数据处理器
         ENUM_MAP.put(ConfigGroupEnum.SELECTOR, new SelectorDataHandler(pluginDataSubscriber));
+        // 规则 --> 规则数据处理器
         ENUM_MAP.put(ConfigGroupEnum.RULE, new RuleDataHandler(pluginDataSubscriber));
+        // 认证信息 --> 认证数据处理器
         ENUM_MAP.put(ConfigGroupEnum.APP_AUTH, new AuthDataHandler(authDataSubscribers));
+        // 元数据 --> 元数据处理器
         ENUM_MAP.put(ConfigGroupEnum.META_DATA, new MetaDataHandler(metaDataSubscribers));
     }
 
@@ -56,6 +62,7 @@ public class WebsocketDataHandler {
      * @param eventType the event type
      */
     public void executor(final ConfigGroupEnum type, final String json, final String eventType) {
+        // 根据数据类型，找到对应的数据处理器
         ENUM_MAP.get(type).handle(json, eventType);
     }
 }

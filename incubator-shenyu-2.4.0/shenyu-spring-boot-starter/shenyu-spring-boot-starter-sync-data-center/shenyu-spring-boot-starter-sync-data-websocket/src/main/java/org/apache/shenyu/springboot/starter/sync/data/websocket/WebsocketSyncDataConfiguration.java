@@ -35,6 +35,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ * Websocket数据同步配置
+ * 通过springboot实现条件注入
  * Websocket sync data configuration for spring boot.
  */
 @Configuration

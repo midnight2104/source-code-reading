@@ -56,7 +56,7 @@ public class DataChangedEventDispatcher implements ApplicationListener<DataChang
     @Override
     @SuppressWarnings("unchecked")
     public void onApplicationEvent(final DataChangedEvent event) {
-        // 遍历数据变更监听器，一般使用一种数据同步的方式就好了
+        // 遍历数据变更监听器(一般使用一种数据同步的方式就好了)
         for (DataChangedListener listener : listeners) {
             // 哪种数据发生变更
             switch (event.getGroupKey()) {
