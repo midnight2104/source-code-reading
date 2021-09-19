@@ -30,7 +30,7 @@ public abstract class AbstractDataHandler<T> implements DataHandler {
 
     /**
      * Convert list.
-     *
+     * 不同的逻辑由各自实现类去实现
      * @param json the json
      * @return the list
      */
@@ -38,25 +38,26 @@ public abstract class AbstractDataHandler<T> implements DataHandler {
 
     /**
      * Do refresh.
-     *
+     * 不同的逻辑由各自实现类去实现
      * @param dataList the data list
      */
     protected abstract void doRefresh(List<T> dataList);
 
     /**
      * Do update.
-     *
+     * 不同的逻辑由各自实现类去实现
      * @param dataList the data list
      */
     protected abstract void doUpdate(List<T> dataList);
 
     /**
      * Do delete.
-     *
+     * 不同的逻辑由各自实现类去实现
      * @param dataList the data list
      */
     protected abstract void doDelete(List<T> dataList);
 
+    // 通用逻辑，抽象类实现
     @Override
     public void handle(final String json, final String eventType) {
         List<T> dataList = convert(json);

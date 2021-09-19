@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  * Event forwarders, which forward the changed events to each ConfigEventListener.
- * 数据变更事件分发器：同admin端有数据发生变更时，将变更数据同步到 ShenYu 网关
+ * 数据变更事件分发器：当admin端有数据发生变更时，将变更数据同步到 ShenYu 网关
  * 数据变更依赖于Spring的事件监听机制：ApplicationEventPublisher --> ApplicationEvent --> ApplicationListener
  *
  */
@@ -60,22 +60,22 @@ public class DataChangedEventDispatcher implements ApplicationListener<DataChang
         for (DataChangedListener listener : listeners) {
             // 哪种数据发生变更
             switch (event.getGroupKey()) {
-                case APP_AUTH:
+                case APP_AUTH: // 认证信息
                     listener.onAppAuthChanged((List<AppAuthData>) event.getSource(), event.getEventType());
                     break;
-                case PLUGIN:
+                case PLUGIN:  // 插件信息
                     listener.onPluginChanged((List<PluginData>) event.getSource(), event.getEventType());
                     break;
-                case RULE:
+                case RULE:    // 规则信息
                     listener.onRuleChanged((List<RuleData>) event.getSource(), event.getEventType());
                     break;
-                case SELECTOR:
+                case SELECTOR:   // 选择器信息
                     listener.onSelectorChanged((List<SelectorData>) event.getSource(), event.getEventType());
                     break;
-                case META_DATA:
+                case META_DATA:  // 元数据
                     listener.onMetaDataChanged((List<MetaData>) event.getSource(), event.getEventType());
                     break;
-                default:
+                default:  // 其他类型，抛出异常
                     throw new IllegalStateException("Unexpected value: " + event.getGroupKey());
             }
         }

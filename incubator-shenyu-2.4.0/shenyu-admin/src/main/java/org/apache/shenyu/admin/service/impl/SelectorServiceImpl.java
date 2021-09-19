@@ -117,15 +117,20 @@ public class SelectorServiceImpl implements SelectorService {
     @Transactional(rollbackFor = Exception.class)
     public int createOrUpdate(final SelectorDTO selectorDTO) {
         int selectorCount;
+        // 构建数据 DTO --> DO
         SelectorDO selectorDO = SelectorDO.buildSelectorDO(selectorDTO);
         List<SelectorConditionDTO> selectorConditionDTOs = selectorDTO.getSelectorConditions();
+        // 是添加还是更新
         if (StringUtils.isEmpty(selectorDTO.getId())) {
+            // 插入选择器数据
             selectorCount = selectorMapper.insertSelective(selectorDO);
+            // 插入选择器中的条件数据
             selectorConditionDTOs.forEach(selectorConditionDTO -> {
                 selectorConditionDTO.setSelectorId(selectorDO.getId());
                 selectorConditionMapper.insertSelective(SelectorConditionDO.buildSelectorConditionDO(selectorConditionDTO));
             });
             // check selector add
+            // 权限检查
             if (dataPermissionMapper.listByUserId(JwtUtils.getUserInfo().getUserId()).size() > 0) {
                 DataPermissionDTO dataPermissionDTO = new DataPermissionDTO();
                 dataPermissionDTO.setUserId(JwtUtils.getUserInfo().getUserId());
@@ -135,6 +140,7 @@ public class SelectorServiceImpl implements SelectorService {
             }
 
         } else {
+            // 更新数据，先删除再新增
             selectorCount = selectorMapper.updateSelective(selectorDO);
             //delete rule condition then add
             selectorConditionMapper.deleteByQuery(new SelectorConditionQuery(selectorDO.getId()));
@@ -144,7 +150,10 @@ public class SelectorServiceImpl implements SelectorService {
                 selectorConditionMapper.insertSelective(selectorConditionDO);
             });
         }
+        // 发布事件
         publishEvent(selectorDO, selectorConditionDTOs);
+
+        // 更新upstream
         updateDivideUpstream(selectorDO);
         return selectorCount;
     }
@@ -304,10 +313,12 @@ public class SelectorServiceImpl implements SelectorService {
     }
 
     private void publishEvent(final SelectorDO selectorDO, final List<SelectorConditionDTO> selectorConditionDTOs) {
+        // 找到选择器对应的插件
         PluginDO pluginDO = pluginMapper.selectById(selectorDO.getPluginId());
+        // 构建条件数据
         List<ConditionData> conditionDataList =
                 selectorConditionDTOs.stream().map(ConditionTransfer.INSTANCE::mapToSelectorDTO).collect(Collectors.toList());
-        // publish change event.
+        //发布变更数据
         eventPublisher.publishEvent(new DataChangedEvent(ConfigGroupEnum.SELECTOR, DataEventTypeEnum.UPDATE,
                 Collections.singletonList(SelectorDO.transFrom(selectorDO, pluginDO.getName(), conditionDataList))));
     }

@@ -24,7 +24,7 @@ import org.apache.shenyu.common.enums.DataEventTypeEnum;
 import org.springframework.boot.CommandLineRunner;
 
 /**
- * The type Zookeeper data init.
+ * Zookeeper 数据初始化
  */
 public class ZookeeperDataInit implements CommandLineRunner {
 
@@ -48,6 +48,7 @@ public class ZookeeperDataInit implements CommandLineRunner {
         String pluginPath = DefaultPathConstants.PLUGIN_PARENT;
         String authPath = DefaultPathConstants.APP_AUTH_PARENT;
         String metaDataPath = DefaultPathConstants.META_DATA;
+        // 判断zk中是否存在数据
         if (!zkClient.exists(pluginPath) && !zkClient.exists(authPath) && !zkClient.exists(metaDataPath)) {
             syncDataService.syncAll(DataEventTypeEnum.REFRESH);
         }

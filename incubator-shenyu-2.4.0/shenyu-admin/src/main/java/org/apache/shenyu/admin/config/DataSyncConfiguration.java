@@ -76,13 +76,13 @@ public class DataSyncConfiguration {
      * The type Zookeeper listener.
      */
     @Configuration
-    @ConditionalOnProperty(prefix = "shenyu.sync.zookeeper", name = "url")
+    @ConditionalOnProperty(prefix = "shenyu.sync.zookeeper", name = "url") // 条件属性，满足才会被加载
     @Import(ZookeeperConfiguration.class)
     static class ZookeeperListener {
 
         /**
          * Config event listener data changed listener.
-         *
+         * 创建Zookeeper数据变更监听器
          * @param zkClient the zk client
          * @return the data changed listener
          */
@@ -94,7 +94,7 @@ public class DataSyncConfiguration {
 
         /**
          * Zookeeper data init zookeeper data init.
-         *
+         * 创建 Zookeeper 数据初始化类
          * @param zkClient        the zk client
          * @param syncDataService the sync data service
          * @return the zookeeper data init
@@ -162,7 +162,7 @@ public class DataSyncConfiguration {
         }
 
         /**
-         * Websocket collector websocket collector.
+         * Websocket collector.
          *
          * @return the websocket collector
          */

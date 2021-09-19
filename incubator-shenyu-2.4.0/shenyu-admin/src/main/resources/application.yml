@@ -52,12 +52,12 @@ shenyu:
     init_script: "META-INF/schema.sql"
     init_enable: true
   sync:
-    websocket:
-      enabled: true
-#      zookeeper:
-#          url: localhost:2181
-#          sessionTimeout: 5000
-#          connectionTimeout: 2000
+#    websocket:
+#      enabled: true
+      zookeeper:
+          url: localhost:2181
+          sessionTimeout: 5000
+          connectionTimeout: 2000
 #      http:
 #        enabled: true
 #      nacos:

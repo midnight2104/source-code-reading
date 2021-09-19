@@ -31,7 +31,7 @@ public class ZookeeperConfiguration {
 
     /**
      * register zkClient in spring ioc.
-     *
+     * 向 Spring IOC 容器注册 zkClient
      * @param zookeeperProp the zookeeper configuration
      * @return ZkClient {@linkplain ZkClient}
      */

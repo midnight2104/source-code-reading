@@ -90,21 +90,29 @@ public class ZookeeperDataChangedListener implements DataChangedListener {
         }
     }
 
+    // 选择器信息发生改变
     @Override
     public void onSelectorChanged(final List<SelectorData> changed, final DataEventTypeEnum eventType) {
+        // 刷新操作
         if (eventType == DataEventTypeEnum.REFRESH && !changed.isEmpty()) {
             String selectorParentPath = DefaultPathConstants.buildSelectorParentPath(changed.get(0).getPluginName());
             deleteZkPathRecursive(selectorParentPath);
         }
+        // 发生变更的数据
         for (SelectorData data : changed) {
+            // 构建选择器数据的真实路径
             String selectorRealPath = DefaultPathConstants.buildSelectorRealPath(data.getPluginName(), data.getId());
+            // 如果是删除操作
             if (eventType == DataEventTypeEnum.DELETE) {
+                // 删除当前数据
                 deleteZkPath(selectorRealPath);
                 continue;
             }
+            // 父节点路径
             String selectorParentPath = DefaultPathConstants.buildSelectorParentPath(data.getPluginName());
+            // 创建父节点
             createZkNode(selectorParentPath);
-            //create or update
+            // 插入或更新数据
             insertZkNode(selectorRealPath, data);
         }
     }
@@ -129,11 +137,15 @@ public class ZookeeperDataChangedListener implements DataChangedListener {
     }
     
     private void insertZkNode(final String path, final Object data) {
+        // 创建节点
         createZkNode(path);
+        // 通过 zkClient 写入数据
         zkClient.writeData(path, null == data ? "" : GsonUtils.getInstance().toJson(data));
     }
-    
+
+    // 创建 zk 节点
     private void createZkNode(final String path) {
+        // 不存在才创建
         if (!zkClient.exists(path)) {
             zkClient.createPersistent(path, true);
         }

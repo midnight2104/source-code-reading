@@ -24,6 +24,7 @@ import org.apache.shenyu.common.utils.GsonUtils;
 import org.apache.shenyu.sync.data.api.PluginDataSubscriber;
 
 /**
+ * 选择器数据处理器
  * The type Selector data handler.
  */
 @RequiredArgsConstructor
@@ -31,22 +32,26 @@ public class SelectorDataHandler extends AbstractDataHandler<SelectorData> {
 
     private final PluginDataSubscriber pluginDataSubscriber;
 
+    // 反序列化
     @Override
     public List<SelectorData> convert(final String json) {
         return GsonUtils.getInstance().fromList(json, SelectorData.class);
     }
 
+    // 刷新操作
     @Override
     protected void doRefresh(final List<SelectorData> dataList) {
         pluginDataSubscriber.refreshSelectorDataSelf(dataList);
         dataList.forEach(pluginDataSubscriber::onSelectorSubscribe);
     }
 
+    // 更新操作
     @Override
     protected void doUpdate(final List<SelectorData> dataList) {
         dataList.forEach(pluginDataSubscriber::onSelectorSubscribe);
     }
 
+    // 删除操作
     @Override
     protected void doDelete(final List<SelectorData> dataList) {
         dataList.forEach(pluginDataSubscriber::unSelectorSubscribe);

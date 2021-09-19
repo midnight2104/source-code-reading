@@ -100,8 +100,11 @@ public class SelectorController {
      */
     @PutMapping("/{id}")
     public ShenyuAdminResult updateSelector(@PathVariable("id") final String id, @Valid @RequestBody final SelectorDTO selectorDTO) {
+        // 设置当前选择器数据id
         selectorDTO.setId(id);
+        // 创建或更新操作
         Integer updateCount = selectorService.createOrUpdate(selectorDTO);
+        // 返回结果信息
         return ShenyuAdminResult.success(ShenyuResultMessage.UPDATE_SUCCESS, updateCount);
     }
 

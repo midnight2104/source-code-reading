@@ -69,20 +69,28 @@ public class ZookeeperSyncDataService implements SyncDataService, AutoCloseable 
         this.pluginDataSubscriber = pluginDataSubscriber;
         this.metaDataSubscribers = metaDataSubscribers;
         this.authDataSubscribers = authDataSubscribers;
+        // 订阅插件、选择器和规则数据
         watcherData();
+        // 订阅认证数据
         watchAppAuth();
+        // 订阅元数据
         watchMetaData();
     }
 
     private void watcherData() {
+        // 插件节点路径
         final String pluginParent = DefaultPathConstants.PLUGIN_PARENT;
+        // 所有插件节点
         List<String> pluginZKs = zkClientGetChildren(pluginParent);
         for (String pluginName : pluginZKs) {
+            // 订阅当前所有插件、选择器和规则数据
             watcherAll(pluginName);
         }
+        // 订阅子节点（新增或删除一个插件）
         zkClient.subscribeChildChanges(pluginParent, (parentPath, currentChildren) -> {
             if (CollectionUtils.isNotEmpty(currentChildren)) {
                 for (String pluginName : currentChildren) {
+                    // 需要订阅子节点的所有插件、选择器和规则数据
                     watcherAll(pluginName);
                 }
             }
@@ -90,34 +98,49 @@ public class ZookeeperSyncDataService implements SyncDataService, AutoCloseable 
     }
 
     private void watcherAll(final String pluginName) {
+        // 订阅插件数据
         watcherPlugin(pluginName);
+        // 订阅选择器数据
         watcherSelector(pluginName);
+        // 订阅规则数据
         watcherRule(pluginName);
     }
 
     private void watcherPlugin(final String pluginName) {
+        // 当前插件路径
         String pluginPath = DefaultPathConstants.buildPluginPath(pluginName);
+        // 是否存在，不存在就创建
         if (!zkClient.exists(pluginPath)) {
             zkClient.createPersistent(pluginPath, true);
         }
+        // 读取zk上当前节点数据，并反序列化
         PluginData pluginData = null == zkClient.readData(pluginPath) ? null
                 : GsonUtils.getInstance().fromJson((String) zkClient.readData(pluginPath), PluginData.class);
+        // 缓存到网关内存中
         cachePluginData(pluginData);
+        // 订阅插件节点
         subscribePluginDataChanges(pluginPath, pluginName);
     }
 
     private void watcherSelector(final String pluginName) {
+        // 选择器数据路径
         String selectorParentPath = DefaultPathConstants.buildSelectorParentPath(pluginName);
+        // 所有子节点
         List<String> childrenList = zkClientGetChildren(selectorParentPath);
         if (CollectionUtils.isNotEmpty(childrenList)) {
             childrenList.forEach(children -> {
+                // 一条选择器数据的真实路径
                 String realPath = buildRealPath(selectorParentPath, children);
+                // 从zk中读取数据，并反序列化
                 SelectorData selectorData = null == zkClient.readData(realPath) ? null
                         : GsonUtils.getInstance().fromJson((String) zkClient.readData(realPath), SelectorData.class);
+                // 缓存选择器数据到网关内存
                 cacheSelectorData(selectorData);
+                // 订阅当前数据：更新或删除
                 subscribeSelectorDataChanges(realPath);
             });
         }
+        // 订阅子节点变更信息（新增或删除选择器数据）
         subscribeChildChanges(ConfigGroupEnum.SELECTOR, selectorParentPath, childrenList);
     }
 
@@ -168,17 +191,20 @@ public class ZookeeperSyncDataService implements SyncDataService, AutoCloseable 
 
     private void subscribeChildChanges(final ConfigGroupEnum groupKey, final String groupParentPath, final List<String> childrenList) {
         switch (groupKey) {
-            case SELECTOR:
+            case SELECTOR:  // 选择器数据
                 zkClient.subscribeChildChanges(groupParentPath, (parentPath, currentChildren) -> {
                     if (CollectionUtils.isNotEmpty(currentChildren)) {
+                        // 新的数据节点
                         List<String> addSubscribePath = addSubscribePath(childrenList, currentChildren);
+                        // 将新的数据节点信息缓存到网关内存，并订阅该节点
                         addSubscribePath.stream().map(addPath -> {
                             String realPath = buildRealPath(parentPath, addPath);
                             SelectorData selectorData = null == zkClient.readData(realPath) ? null
                                     : GsonUtils.getInstance().fromJson((String) zkClient.readData(realPath), SelectorData.class);
+                            // 数据缓存到网关内存
                             cacheSelectorData(selectorData);
                             return realPath;
-                        }).forEach(this::subscribeSelectorDataChanges);
+                        }).forEach(this::subscribeSelectorDataChanges); // 订阅当前数据节点：更新或删除
 
                     }
                 });
@@ -232,16 +258,17 @@ public class ZookeeperSyncDataService implements SyncDataService, AutoCloseable 
     }
 
     private void subscribePluginDataChanges(final String pluginPath, final String pluginName) {
+        // 订阅数据变更：更新或删除
         zkClient.subscribeDataChanges(pluginPath, new IZkDataListener() {
 
             @Override
-            public void handleDataChange(final String dataPath, final Object data) {
+            public void handleDataChange(final String dataPath, final Object data) {  // 更新操作
                 Optional.ofNullable(data)
                         .ifPresent(d -> Optional.ofNullable(pluginDataSubscriber).ifPresent(e -> e.onSubscribe(GsonUtils.getInstance().fromJson(data.toString(), PluginData.class))));
             }
 
             @Override
-            public void handleDataDeleted(final String dataPath) {
+            public void handleDataDeleted(final String dataPath) {   // 删除操作
                 final PluginData data = new PluginData();
                 data.setName(pluginName);
                 Optional.ofNullable(pluginDataSubscriber).ifPresent(e -> e.unSubscribe(data));
@@ -250,57 +277,61 @@ public class ZookeeperSyncDataService implements SyncDataService, AutoCloseable 
     }
 
     private void subscribeSelectorDataChanges(final String path) {
+        // 订阅选择器对应的zk节点：更新或删除
         zkClient.subscribeDataChanges(path, new IZkDataListener() {
             @Override
-            public void handleDataChange(final String dataPath, final Object data) {
+            public void handleDataChange(final String dataPath, final Object data) { // 更新
                 cacheSelectorData(GsonUtils.getInstance().fromJson(data.toString(), SelectorData.class));
             }
 
             @Override
-            public void handleDataDeleted(final String dataPath) {
+            public void handleDataDeleted(final String dataPath) { // 删除
                 unCacheSelectorData(dataPath);
             }
         });
     }
 
     private void subscribeRuleDataChanges(final String path) {
+        // 订阅规则对应的zk节点：更新或删除
         zkClient.subscribeDataChanges(path, new IZkDataListener() {
             @Override
-            public void handleDataChange(final String dataPath, final Object data) {
+            public void handleDataChange(final String dataPath, final Object data) { // 更新
                 cacheRuleData(GsonUtils.getInstance().fromJson(data.toString(), RuleData.class));
             }
 
             @Override
-            public void handleDataDeleted(final String dataPath) {
+            public void handleDataDeleted(final String dataPath) { // 删除
                 unCacheRuleData(dataPath);
             }
         });
     }
 
     private void subscribeAppAuthDataChanges(final String realPath) {
+        // 订阅认证信息对应的zk节点：更新或删除
         zkClient.subscribeDataChanges(realPath, new IZkDataListener() {
             @Override
-            public void handleDataChange(final String dataPath, final Object data) {
+            public void handleDataChange(final String dataPath, final Object data) { // 更新
                 cacheAuthData(GsonUtils.getInstance().fromJson(data.toString(), AppAuthData.class));
             }
 
             @Override
-            public void handleDataDeleted(final String dataPath) {
+            public void handleDataDeleted(final String dataPath) { // 删除
                 unCacheAuthData(dataPath);
             }
         });
     }
 
     private void subscribeMetaDataChanges(final String realPath) {
+        // 订阅元数据对应的zk节点：更新或删除
         zkClient.subscribeDataChanges(realPath, new IZkDataListener() {
             @Override
-            public void handleDataChange(final String dataPath, final Object data) {
+            public void handleDataChange(final String dataPath, final Object data) { // 更新
                 cacheMetaData(GsonUtils.getInstance().fromJson(data.toString(), MetaData.class));
             }
 
             @SneakyThrows
             @Override
-            public void handleDataDeleted(final String dataPath) {
+            public void handleDataDeleted(final String dataPath) { // 删除
                 final String realPath = dataPath.substring(DefaultPathConstants.META_DATA.length() + 1);
                 MetaData metaData = new MetaData();
                 metaData.setPath(URLDecoder.decode(realPath, StandardCharsets.UTF_8.name()));
